@@ -144,7 +144,14 @@ def run_evaluation(settings: Settings, eval_queries: List[Dict]):
                 # Log eval results table with query metadata directly to MLflow
                 if "eval_results" in results.tables:
                     eval_table = results.tables["eval_results"].copy()
-                    eval_table.insert(1, "query_text", [q["query_text"] for q in eval_queries])
+                    # Extract query_text from inputs column (each row may have multiple results per query)
+                    if "inputs" in eval_table.columns:
+                        query_texts = eval_table["inputs"].apply(
+                            lambda x: x.get("query", "") if isinstance(x, dict) else ""
+                        )
+                    else:
+                        query_texts = pd.Series([""] * len(eval_table))
+                    eval_table.insert(1, "query_text", query_texts)
                     eval_table.insert(2, "config_name", config_name)
                     
                     artifact_file = f"eval_results_{config_name}.json"
