@@ -36,10 +36,10 @@ EVAL_VECTOR_SEARCH_ENDPOINT=aigc-vector-search-endpoint
 EVAL_VECTOR_SEARCH_INDEX=aigc_prod.intent_engine.content_article_gold_index
 EVAL_DATABRICKS_LLM_JUDGE_ENDPOINT=databricks-meta-llama-3-1-70b-instruct
 EVAL_MLFLOW_EXPERIMENT_NAME=/Users/your.email@company.com/vector-search-evaluation
+EVAL_MLFLOW_MAX_WORKERS=3  # Maximum number of workers for MLflow evaluation. Prevent overloading the LLM judge endpoint.
+EVAL_MLFLOW_MAX_SCORER_WORKERS=3  # Maximum number of workers for running scorers/judges in parallel. Controls concurrency for scorer execution to prevent overloading the LLM judge endpoint.
 EVAL_NUM_RESULTS=10
 ```
-
-**Note**: If you have Databricks CLI configured with a profile, you can omit `EVAL_DATABRICKS_TOKEN` and it will use the profile authentication.
 
 ## Usage
 

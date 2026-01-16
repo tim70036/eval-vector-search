@@ -1,7 +1,7 @@
 """Configuration using Pydantic Settings for environment-based config"""
 
 import os
-from typing import Any, Optional
+from typing import Any
 from pydantic import Field
 from pydantic_settings import BaseSettings
 from databricks.vector_search.reranker import DatabricksReranker
@@ -16,7 +16,8 @@ class Settings(BaseSettings):
     
     # MLflow Configuration for Databricks
     mlflow_experiment_name: str = Field(..., description="MLflow experiment name (e.g., /Users/username/vector-search-eval)")
-    mlflow_max_workers: int = Field(..., description="Maximum number of workers for MLflow evaluation. Prevent overloading the LLM judge endpoint.")
+    mlflow_max_workers: int = Field(..., description=" This controls the data-level concurrency, or how many data items (rows in your evaluation dataset) are evaluated in parallel. Prevent overloading the LLM judge endpoint.")
+    mlflow_max_scorer_workers: int = Field(..., description=": This controls the scorer-level concurrency, or how many scorers run in parallel for each data item. Prevent overloading the LLM judge endpoint.")
     # Databricks Configuration for MLflow authentication
     databricks_host: str = Field(..., description="Databricks workspace URL (e.g., https://your-workspace.cloud.databricks.com)")
     databricks_token: str = Field(..., description="Databricks personal access token")
@@ -25,7 +26,7 @@ class Settings(BaseSettings):
     
     class Config:
         env_file = ".env"
-        env_prefix = "EVAL_"  # e.g., EVAL_DATABRICKS_LLM_JUDGE_ENDPOINT
+        env_prefix = "EVAL_"
         case_sensitive = False
 
     def model_post_init(self, __context: Any) -> None:
@@ -34,6 +35,7 @@ class Settings(BaseSettings):
         os.environ["DATABRICKS_HOST"] = self.databricks_host
 
         os.environ["MLFLOW_GENAI_EVAL_MAX_WORKERS"] = str(self.mlflow_max_workers)
+        os.environ["MLFLOW_GENAI_EVAL_MAX_SCORER_WORKERS"] = str(self.mlflow_max_scorer_workers)
         
         # Set authentication method (token or profile)
         if self.databricks_token:
