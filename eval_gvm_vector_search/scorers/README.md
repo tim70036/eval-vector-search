@@ -17,9 +17,12 @@ scorers/
 ├── README.md                   # This file
 ├── base.py                     # BaseScorer abstract class
 ├── registry.py                 # ScorerRegistry for managing scorers
-├── retrieval_relevance.py      # Retrieval relevance scorer
-├── result_quality.py           # Result quality scorer
-└── ranking_quality.py          # Ranking quality scorer
+├── intent_fit.py               # Intent Fit scorer (意圖吻合度)
+├── latent_interest_match.py    # Latent Interest Match scorer (潛在興趣吻合)
+├── diversity.py                # Diversity scorer (多樣性/互補性)
+├── engagement.py               # Engagement scorer (吸睛但不誤導)
+├── ranking.py                  # Ranking scorer (排序品質)
+└── credibility.py              # Credibility scorer (不誤導與可信度)
 ```
 
 ## ➕ How to Add a New Scorer
@@ -105,12 +108,12 @@ Your new scorer will automatically:
 In `scorers/__init__.py`:
 
 ```python
-# scorer_registry.register(RankingQualityScorer)  # Disabled
+# scorer_registry.register(RankingScorer)  # Disabled
 ```
 
 ### Option 2: Delete the file (permanent)
 
-1. Delete the scorer file (e.g., `ranking_quality.py`)
+1. Delete the scorer file (e.g., `ranking.py`)
 2. Remove its import and registration from `__init__.py`
 
 The system will automatically adapt without any other changes needed!
@@ -159,7 +162,7 @@ scorers = scorer_registry.get_all_scorers(llm_endpoint="my-endpoint")
 
 # Get scorer names (for metric extraction)
 names = scorer_registry.get_scorer_names()
-# Returns: ['retrieval_relevance', 'result_quality', 'ranking_quality']
+# Returns: ['intent_fit', 'latent_interest_match', 'diversity', 'engagement', 'ranking', 'credibility']
 
 # Get scorer info
 info = scorer_registry.get_scorers_info()

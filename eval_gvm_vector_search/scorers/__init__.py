@@ -14,22 +14,31 @@ To remove a scorer:
 
 from eval_gvm_vector_search.scorers.base import BaseScorer
 from eval_gvm_vector_search.scorers.registry import scorer_registry, ScorerRegistry
-from eval_gvm_vector_search.scorers.retrieval_relevance import RetrievalRelevanceScorer
-from eval_gvm_vector_search.scorers.result_quality import ResultQualityScorer
-from eval_gvm_vector_search.scorers.ranking_quality import RankingQualityScorer
+from eval_gvm_vector_search.scorers.intent_fit import IntentFitScorer
+from eval_gvm_vector_search.scorers.latent_interest_match import LatentInterestMatchScorer
+from eval_gvm_vector_search.scorers.diversity import DiversityScorer
+from eval_gvm_vector_search.scorers.engagement import EngagementScorer
+from eval_gvm_vector_search.scorers.ranking import RankingScorer
+from eval_gvm_vector_search.scorers.credibility import CredibilityScorer
 
 # Auto-register all scorers
 # Add/remove scorers here - changes automatically propagate through the system
-scorer_registry.register(RetrievalRelevanceScorer)
-scorer_registry.register(ResultQualityScorer)
-scorer_registry.register(RankingQualityScorer)
+scorer_registry.register(IntentFitScorer)
+scorer_registry.register(LatentInterestMatchScorer)
+scorer_registry.register(DiversityScorer)
+scorer_registry.register(EngagementScorer)
+scorer_registry.register(RankingScorer)
+scorer_registry.register(CredibilityScorer)
 
 # Public exports
 __all__ = [
     "BaseScorer",
     "ScorerRegistry",
     "scorer_registry",
-    "RetrievalRelevanceScorer",
-    "ResultQualityScorer",
-    "RankingQualityScorer",
+    "IntentFitScorer",
+    "LatentInterestMatchScorer",
+    "DiversityScorer",
+    "EngagementScorer",
+    "RankingScorer",
+    "CredibilityScorer",
 ]
