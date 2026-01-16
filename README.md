@@ -1,6 +1,8 @@
 # MLflow Vector Search Evaluation
 
-Evaluate Databricks vector search configurations using MLflow GenAI with custom LLM judges.
+Finding the perfect search configuration shouldn't be guesswork. This toolkit systematically evaluates different Databricks vector search strategies—comparing HYBRID, ANN, and FULL_TEXT approaches with and without reranking—to discover which configuration delivers the most relevant, credible, and engaging results for your users.
+
+Powered by MLflow GenAI's evaluation framework and custom LLM judges, this tool measures search quality across multiple dimensions: relevance, credibility, diversity, engagement, and intent alignment. Run comprehensive evaluations, compare configurations side-by-side in MLflow, and make data-driven decisions about your search infrastructure.
 
 ## Features
 
@@ -55,35 +57,45 @@ python -m eval_gvm_vector_search.cli
 # Find your experiment and use "Compare Runs" to see all 6 configurations
 ```
 
-## Customizing Evaluation Rules
+## Customizing Scorers
 
-Edit `eval_gvm_vector_search/evaluator.py` to insert your custom rules in the judge instructions:
+The evaluation uses a registry-based scorer system. Each scorer is a custom LLM judge that evaluates search results on specific dimensions (intent fit, diversity, credibility, engagement, ranking quality).
+
+### Adding a New Scorer
+
+1. Create a new file in `eval_gvm_vector_search/scorers/` (e.g., `my_scorer.py`):
 
 ```python
-CUSTOM EVALUATION RULES:
-- [INSERT YOUR DOMAIN-SPECIFIC RULES HERE]
-- Results must mention specific keywords
-- Technical accuracy requirements
-- Brand guidelines compliance
+from eval_gvm_vector_search.scorers.base import BaseScorer
+
+class MyScorer(BaseScorer):
+    @property
+    def name(self) -> str:
+        return "my_scorer"
+    
+    @property
+    def description(self) -> str:
+        return "Evaluates my custom criteria"
+    
+    @property
+    def instructions(self) -> str:
+        return """
+        REQUEST: {{ inputs }}
+        RETRIEVED RESULTS: {{ outputs }}
+        
+        Evaluate and return a score from 1-5.
+        """
 ```
 
-## Project Structure
+2. Register it in `scorers/__init__.py`:
 
+```python
+from eval_gvm_vector_search.scorers.my_scorer import MyScorer
+scorer_registry.register(MyScorer)
 ```
-eval-gvm-vector-search/
-├── pyproject.toml                    # Package configuration
-├── uv.lock                           # Dependency lock file
-├── .python-version                   # Python version
-├── .gitignore                        # Git ignore rules
-├── env.template                      # Environment variables template
-├── eval_gvm_vector_search/           # Main package
-│   ├── __init__.py
-│   ├── cli.py                       # CLI entry point
-│   ├── config.py                    # Pydantic Settings
-│   ├── evaluator.py                 # Custom LLM judges
-│   ├── vector_search.py             # Vector search wrapper
-│   ├── eval_runner.py               # Main evaluation logic
-│   └── logging_config.py            # Loguru logging configuration
-└── data/
-    └── eval_queries.json            # Evaluation queries
-```
+
+The new scorer will automatically be used in all evaluations and generate MLflow metrics.
+
+### Removing a Scorer
+
+Comment out or remove the registration line in `scorers/__init__.py`. See existing scorers in `eval_gvm_vector_search/scorers/` for examples.
