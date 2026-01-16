@@ -117,13 +117,17 @@ def run_evaluation(settings: Settings, eval_queries: List[Dict]):
                                                 pass
                         
                         if scores:
+                            q1 = float(np.percentile(scores, 25))
+                            q3 = float(np.percentile(scores, 75))
+                            iqr = q3 - q1
+                            fail_count = sum(1 for score in scores if score <= 2)
+                            fail_rate = fail_count / len(scores)
+                            
                             judge_metrics[judge_name] = {
-                                'mean': float(np.mean(scores)),
-                                'min': float(np.min(scores)),
-                                'max': float(np.max(scores)),
                                 'median': float(np.median(scores)),
-                                'variance': float(np.var(scores)),
-                                'p90': float(np.percentile(scores, 90))
+                                'mean': float(np.mean(scores)),
+                                'IQR': iqr,
+                                'fail-rate': fail_rate
                             }
                             
                             for agg_name, agg_value in judge_metrics[judge_name].items():
