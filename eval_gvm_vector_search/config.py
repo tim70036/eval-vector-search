@@ -12,7 +12,7 @@ class Settings(BaseSettings):
     # Databricks Configuration (from env or .env file)
     vector_search_endpoint: str = Field(..., description="Databricks vector search endpoint name")
     vector_search_index: str = Field(..., description="Databricks vector search index name")
-    llm_judge_endpoint: str = Field(..., description="Databricks LLM endpoint name for judging")
+    databricks_llm_judge_endpoint: str = Field(..., description="Databricks LLM endpoint name for judging")
     
     # MLflow Configuration for Databricks
     mlflow_experiment_name: str = Field(..., description="MLflow experiment name (e.g., /Users/username/vector-search-eval)")
@@ -25,7 +25,7 @@ class Settings(BaseSettings):
     
     class Config:
         env_file = ".env"
-        env_prefix = "EVAL_"  # e.g., EVAL_LLM_JUDGE_ENDPOINT
+        env_prefix = "EVAL_"  # e.g., EVAL_DATABRICKS_LLM_JUDGE_ENDPOINT
         case_sensitive = False
 
     def model_post_init(self, __context: Any) -> None:

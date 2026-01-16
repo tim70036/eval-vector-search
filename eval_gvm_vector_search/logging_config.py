@@ -19,17 +19,7 @@ def setup_logging(level: str = "INFO"):
     Args:
         level: Log level (default: INFO)
     """
-    # Remove default handler
-    logger.remove()
-    
-    # Add custom formatted stdout handler
-    logger.add(
-        sys.stdout,
-        format="<green>{time:HH:mm:ss}</green> | <level>{level: <8}</level> | <level>{message}</level>",
-        level=level,
-        colorize=True,
-    )
-    
+
     # Intercept standard logging (official loguru approach)
     class InterceptHandler(logging.Handler):
         def emit(self, record: logging.LogRecord) -> None:
@@ -57,7 +47,7 @@ def setup_logging(level: str = "INFO"):
             logger.opt(depth=depth, exception=record.exc_info).log(level, record.getMessage())
     
     # Apply interception
-    logging.basicConfig(handlers=[InterceptHandler()], level=0, force=True)
+    logging.basicConfig(handlers=[InterceptHandler()], level=level, force=True)
     
     # Set root logger to CRITICAL to suppress everything else
     logging.getLogger().setLevel(logging.CRITICAL)

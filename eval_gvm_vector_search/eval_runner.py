@@ -9,11 +9,7 @@ from loguru import logger
 
 from eval_gvm_vector_search.config import Settings, SEARCH_CONFIGS
 from eval_gvm_vector_search.vector_search import VectorSearchWrapper
-from eval_gvm_vector_search.evaluator import (
-    create_retrieval_relevance_judge,
-    create_result_quality_judge,
-    create_ranking_quality_judge
-)
+from eval_gvm_vector_search.scorers import scorer_registry
 
 
 
@@ -42,7 +38,7 @@ def run_evaluation(settings: Settings, eval_queries: List[Dict]):
     """
     logger.info(f"Starting evaluation with {len(eval_queries)} queries")
     logger.info(f"MLflow Experiment: {settings.mlflow_experiment_name}")
-    logger.info(f"LLM Judge Endpoint: {settings.llm_judge_endpoint}")
+    logger.info(f"LLM Judge Endpoint: {settings.databricks_llm_judge_endpoint}")
     logger.info(f"Vector Search Index: {settings.vector_search_index}")
     logger.info(f"Number of results per query: {settings.num_results}")
             
@@ -60,16 +56,12 @@ def run_evaluation(settings: Settings, eval_queries: List[Dict]):
     else:
         logger.info("Vector search connection successful")
     
-    retrieval_relevance_judge = create_retrieval_relevance_judge(settings.llm_judge_endpoint)
-    result_quality_judge = create_result_quality_judge(settings.llm_judge_endpoint)
-    ranking_quality_judge = create_ranking_quality_judge(settings.llm_judge_endpoint)
+    # Get all registered scorers from the registry
+    scorer_instances = scorer_registry.get_all_scorers(settings.databricks_llm_judge_endpoint)
+    scorers = [scorer.create_judge() for scorer in scorer_instances]
+    scorer_names = scorer_registry.get_scorer_names()
     
-    scorers = [
-        retrieval_relevance_judge,
-        result_quality_judge,
-        ranking_quality_judge
-    ]
-    logger.info(f"Created {len(scorers)} custom judges")
+    logger.info(f"Loaded {len(scorers)} scorers from registry: {scorer_names}")
     
     # Prepare evaluation dataframe
     eval_df = pd.DataFrame([
@@ -104,12 +96,13 @@ def run_evaluation(settings: Settings, eval_queries: List[Dict]):
                     scorers=scorers
                 )
                 
-                # Extract and aggregate judge scores from assessments
+                # Extract and aggregate judge scores from assessments (dynamic based on registry)
                 judge_metrics = {}
                 if "eval_results" in results.tables:
                     eval_table = results.tables["eval_results"]
                     
-                    for judge_name in ["retrieval_relevance", "result_quality", "ranking_quality"]:
+                    # Dynamically extract metrics for all registered scorers
+                    for judge_name in scorer_names:
                         scores = []
                         
                         for assessments in eval_table.get('assessments', []):
@@ -136,12 +129,13 @@ def run_evaluation(settings: Settings, eval_queries: List[Dict]):
                             for agg_name, agg_value in judge_metrics[judge_name].items():
                                 mlflow.log_metric(f"{judge_name}/{agg_name}", agg_value)
                 
-                # Log summary
-                relevance_mean = judge_metrics.get('retrieval_relevance', {}).get('mean', 0.0)
-                quality_mean = judge_metrics.get('result_quality', {}).get('mean', 0.0)
-                ranking_mean = judge_metrics.get('ranking_quality', {}).get('mean', 0.0)
+                # Log summary (dynamic based on all scorers)
+                summary_parts = [f"{config_name}:"]
+                for judge_name in scorer_names:
+                    mean_score = judge_metrics.get(judge_name, {}).get('mean', 0.0)
+                    summary_parts.append(f"{judge_name}={mean_score:.2f}/5")
                 
-                logger.info(f"Results for {config_name}: Relevance={relevance_mean:.2f}/5, Quality={quality_mean:.2f}/5, Ranking={ranking_mean:.2f}/5")
+                logger.info("Results for " + ", ".join(summary_parts))
                 
                 # Log eval results table with query metadata directly to MLflow
                 if "eval_results" in results.tables:

@@ -6,7 +6,7 @@ Usage:
     python run_evaluation.py
 
 Configuration is loaded from environment variables or .env file.
-Required: EVAL_LLM_JUDGE_ENDPOINT
+Required: EVAL_DATABRICKS_LLM_JUDGE_ENDPOINT
 """
 
 import json

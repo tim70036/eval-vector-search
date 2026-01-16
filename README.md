@@ -34,7 +34,7 @@ EVAL_DATABRICKS_HOST=https://your-workspace.cloud.databricks.com
 EVAL_DATABRICKS_TOKEN=  # Optional if using DATABRICKS_CONFIG_PROFILE
 EVAL_VECTOR_SEARCH_ENDPOINT=aigc-vector-search-endpoint
 EVAL_VECTOR_SEARCH_INDEX=aigc_prod.intent_engine.content_article_gold_index
-EVAL_LLM_JUDGE_ENDPOINT=databricks-meta-llama-3-1-70b-instruct
+EVAL_DATABRICKS_LLM_JUDGE_ENDPOINT=databricks-meta-llama-3-1-70b-instruct
 EVAL_MLFLOW_EXPERIMENT_NAME=/Users/your.email@company.com/vector-search-evaluation
 EVAL_NUM_RESULTS=10
 ```
