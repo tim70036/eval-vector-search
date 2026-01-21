@@ -1,19 +1,28 @@
-"""Vector search wrapper for Databricks Vector Search"""
+"""Vector search source implementation for Databricks Vector Search"""
 
+from typing import Dict, List, Callable
 from databricks.vector_search.client import VectorSearchClient
-from loguru import logger
+
+from .base import BaseRetrievalSource
 
 
-class VectorSearchWrapper:
-    """Wrapper for Databricks Vector Search that formats results for MLflow GenAI evaluation"""
+class VectorSearchSource(BaseRetrievalSource):
+    """
+    Retrieval source for Databricks Vector Search.
     
-    def __init__(self, endpoint_name: str, index_name: str):
+    Wraps Databricks Vector Search API and formats results for MLflow evaluation.
+    """
+    
+    def __init__(self, endpoint_name: str, index_name: str, label: str, search_configs: List[Dict], num_results: int):
         """
-        Initialize vector search client and index.
+        Initialize vector search source.
         
         Args:
             endpoint_name: Databricks vector search endpoint name
             index_name: Databricks vector search index name
+            label: Short label for this index (e.g., "baseline", "improved_embeddings")
+            search_configs: List of search configuration dictionaries
+            num_results: Number of results to retrieve per query
         """
         self.vsc = VectorSearchClient()
         self.index = self.vsc.get_index(
@@ -22,14 +31,22 @@ class VectorSearchWrapper:
         )
         self.endpoint_name = endpoint_name
         self.index_name = index_name
+        self._label = label
+        self.search_configs = search_configs
+        self.num_results = num_results
     
-    def search(self, query_text: str, search_config: dict) -> str:
+    @property
+    def source_label(self) -> str:
+        """Get the label for this source."""
+        return self._label
+    
+    def retrieve(self, query: str, config: Dict) -> str:
         """
-        Execute search and format results for LLM judge.
+        Execute vector search and format results for LLM judge.
         
         Args:
-            query_text: The search query
-            search_config: Dictionary with search configuration
+            query: The search query string
+            config: Search configuration dictionary
                 - query_type: "HYBRID", "ANN", or "FULL_TEXT"
                 - num_results: Number of results to retrieve
                 - reranker: Optional DatabricksReranker instance
@@ -42,9 +59,9 @@ class VectorSearchWrapper:
         
         # Execute vector search
         results = self.index.similarity_search(
-            query_text=query_text,
+            query_text=query,
             columns=columns,
-            **search_config
+            **config
         )
         
         # Format results for LLM evaluation (as context)
@@ -91,12 +108,12 @@ class VectorSearchWrapper:
         
         return "\n".join(formatted_results)
     
-    def create_predict_function(self, search_config: dict):
+    def create_predict_function(self, config: Dict) -> Callable[[str], str]:
         """
         Create a predict function for mlflow.genai.evaluate.
         
         Args:
-            search_config: Dictionary with search configuration
+            config: Search configuration dictionary
                 - query_type: "HYBRID", "ANN", or "FULL_TEXT"
                 - num_results: Number of results to retrieve
                 - reranker: Optional DatabricksReranker instance
@@ -105,6 +122,9 @@ class VectorSearchWrapper:
             Function that accepts query as keyword argument
             and returns formatted search results (context string)
         """
+        # Add num_results to config
+        config_with_num = {**config, "num_results": self.num_results}
+        
         def predict_fn(query: str) -> str:
             """
             Execute vector search for a query.
@@ -115,25 +135,29 @@ class VectorSearchWrapper:
             Returns:
                 Formatted search results (context string)
             """
-            # Execute search and format results
-            return self.search(query, search_config)
+            return self.retrieve(query, config_with_num)
         
         return predict_fn
     
-    def test_connection(self) -> bool:
+    def get_config_name(self, config: Dict) -> str:
         """
-        Test the connection to vector search index.
+        Generate readable run name from search configuration and index label.
+        
+        Args:
+            config: Search configuration dictionary
+            
+        Returns:
+            Readable string like "baseline_HYBRID_with_rerank" or "improved_embeddings_ANN_no_rerank"
+        """
+        query_type = config["query_type"]
+        has_reranker = "with_rerank" if "reranker" in config else "no_rerank"
+        return f"{self._label}_{query_type}_{has_reranker}"
+    
+    def get_configs(self) -> List[Dict]:
+        """
+        Get all search configurations to evaluate for this index.
         
         Returns:
-            True if connection is successful, False otherwise
+            List of search configuration dictionaries
         """
-        try:
-            _ = self.index.similarity_search(
-                query_text="test",
-                num_results=1,
-                columns=["title"]
-            )
-            return True
-        except Exception as e:
-            logger.error(f"Connection test failed: {e}")
-            return False
+        return self.search_configs
