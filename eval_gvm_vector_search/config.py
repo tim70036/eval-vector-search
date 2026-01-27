@@ -60,34 +60,34 @@ class Settings(BaseSettings):
 # This replaces the previous VECTOR_INDEXES and SEARCH_CONFIGS with a unified structure
 SOURCE_CONFIGS = [
     # # Vector search source: baseline index
-    # {
-    #     "source_type": "vector_search",
-    #     "label": "baseline",
-    #     "index_name": "aigc_prod.intent_engine.content_article_gold_index",
-    #     "search_configs": [
-    #         {
-    #             "query_type": "HYBRID"
-    #         },
-    #         {
-    #             "query_type": "HYBRID",
-    #             "reranker": DatabricksReranker(columns_to_rerank=["title", "content"])
-    #         },
-    #         {
-    #             "query_type": "ANN"
-    #         },
-    #         {
-    #             "query_type": "ANN",
-    #             "reranker": DatabricksReranker(columns_to_rerank=["title", "content"])
-    #         },
-    #         {
-    #             "query_type": "FULL_TEXT"
-    #         },
-    #         {
-    #             "query_type": "FULL_TEXT",
-    #             "reranker": DatabricksReranker(columns_to_rerank=["title", "content"])
-    #         },
-    #     ]
-    # },
+    {
+        "source_type": "vector_search",
+        "label": "baseline",
+        "index_name": "aigc_prod.intent_engine.content_article_gold_index",
+        "search_configs": [
+            {
+                "query_type": "HYBRID"
+            },
+            {
+                "query_type": "HYBRID",
+                "reranker": DatabricksReranker(columns_to_rerank=["title", "content"])
+            },
+            {
+                "query_type": "ANN"
+            },
+            {
+                "query_type": "ANN",
+                "reranker": DatabricksReranker(columns_to_rerank=["title", "content"])
+            },
+            {
+                "query_type": "FULL_TEXT"
+            },
+            {
+                "query_type": "FULL_TEXT",
+                "reranker": DatabricksReranker(columns_to_rerank=["title", "content"])
+            },
+        ]
+    },
 
     # Vector search source: baseline index with Gemini embeddings
     {
@@ -120,39 +120,7 @@ SOURCE_CONFIGS = [
                 "reranker": DatabricksReranker(columns_to_rerank=["title", "content"])
             },
         ]
-    },
-
-    # Vector search source: improved embeddings index
-    # {
-    #     "source_type": "vector_search",
-    #     "label": "embed_search_summary",
-    #     "index_name": "aigc_prod.intent_engine.content_article_gold_v2_index",
-    #     "search_configs": [
-    #         {
-    #             "query_type": "HYBRID"
-    #         },
-    #         {
-    #             "query_type": "HYBRID",
-    #             "reranker": DatabricksReranker(columns_to_rerank=["title", "content"])
-    #         },
-    #         {
-    #             "query_type": "ANN"
-    #         },
-    #         {
-    #             "query_type": "ANN",
-    #             "reranker": DatabricksReranker(columns_to_rerank=["title", "content"])
-    #         },
-    #         {
-    #             "query_type": "FULL_TEXT"
-    #         },
-    #         {
-    #             "query_type": "FULL_TEXT",
-    #             "reranker": DatabricksReranker(columns_to_rerank=["title", "content"])
-    #         },
-    #     ]
-    # },    
-
-
+    }, 
 
     # Recommend Products API source (uncomment and configure when ready to use)
     # {
