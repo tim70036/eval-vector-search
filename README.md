@@ -32,6 +32,8 @@ uv pip install -e .
 
 Create a `.env` file in the project root:
 
+> **Note:** The evaluation now supports custom embedding models! You can use Gemini embeddings for your queries while leveraging Databricks vector search infrastructure. See the [Gemini Embeddings Integration](#gemini-embeddings-integration) section below.
+
 ```bash
 # Copy template
 cp env.template .env
@@ -54,6 +56,10 @@ EVAL_AGENT_API_TIMEOUT=30
 EVAL_RECOMMEND_PRODUCTS_API_ENDPOINT=https://agent.aigc.mlytics.co/api/v1/recommend-products
 EVAL_RECOMMEND_PRODUCTS_API_TOKEN=your-bearer-token
 EVAL_RECOMMEND_PRODUCTS_CUSTOMER_UUID=your-customer-uuid
+
+# Optional: Gemini Embeddings configuration
+EVAL_GEMINI_API_KEY=your-gemini-api-key
+EVAL_GEMINI_EMBED_MODEL=models/embedding-001
 ```
 
 ### Source Configuration
@@ -272,3 +278,118 @@ The new scorer will automatically be used in all evaluations and generate MLflow
 ### Removing a Scorer
 
 Comment out or remove the registration line in `scorers/__init__.py`. See existing scorers in `eval_gvm_vector_search/scorers/` for examples.
+
+## Gemini Embeddings Integration
+
+The evaluation framework supports using Google's Gemini API for generating query embeddings while still leveraging Databricks vector search for retrieval. This allows you to test different embedding models and compare their performance.
+
+### Why Use Custom Embeddings?
+
+- **Test Different Models**: Compare Gemini embeddings against Databricks' built-in embedding models
+- **Domain-Specific Embeddings**: Use embeddings optimized for your specific use case
+- **Flexibility**: Easily swap embedding providers without changing your vector search infrastructure
+
+### Setup
+
+1. **Get a Gemini API Key**: Obtain an API key from [Google AI Studio](https://ai.google.dev/)
+
+2. **Configure Environment Variables**:
+
+```bash
+# Add to your .env file
+EVAL_GEMINI_API_KEY=your-gemini-api-key-here
+EVAL_GEMINI_EMBED_MODEL=models/embedding-001  # or gemini-embedding-001
+```
+
+3. **Update SOURCE_CONFIGS** in `eval_gvm_vector_search/config.py`:
+
+```python
+SOURCE_CONFIGS = [
+    # Existing Databricks embeddings (baseline)
+    {
+        "source_type": "vector_search",
+        "label": "baseline",
+        "index_name": "your_catalog.your_schema.your_index",
+        "search_configs": [
+            {"query_type": "ANN"},
+            {"query_type": "ANN", "reranker": DatabricksReranker(columns_to_rerank=["title", "content"])},
+        ]
+    },
+    # NEW: Gemini embeddings
+    {
+        "source_type": "vector_search",
+        "label": "gemini_embeddings",
+        "index_name": "your_catalog.your_schema.your_index",
+        "use_gemini_embeddings": True,  # Enable Gemini embeddings
+        "gemini_embed_dimension": 768,  # Optional: override dimension per source
+        "search_configs": [
+            {"query_type": "ANN"},
+            {"query_type": "ANN", "reranker": DatabricksReranker(columns_to_rerank=["title", "content"])},
+        ]
+    },
+]
+```
+
+### Configuring Embedding Dimensions
+
+You can control the output dimensionality of Gemini embeddings per-source in `SOURCE_CONFIGS`:
+
+```python
+{
+    "source_type": "vector_search",
+    "label": "gemini_768d",
+    "index_name": "your_catalog.your_schema.your_index",
+    "use_gemini_embeddings": True,
+    "gemini_embed_dimension": 768,  # Optional: specify dimension (e.g., 256, 512, 768)
+    "search_configs": [{"query_type": "ANN"}]
+}
+```
+
+**Common dimensions**: 256, 512, 768 (model default varies by model)
+
+If `gemini_embed_dimension` is not specified or set to `0`, the model's default dimension will be used.
+
+### How It Works
+
+When `use_gemini_embeddings: True` is set:
+
+1. Your query text is sent to the Gemini API to generate an embedding vector
+2. The embedding vector is passed to Databricks vector search using `query_vector` instead of `query_text`
+3. Databricks performs similarity search using your custom embeddings
+4. Results are formatted and evaluated just like other sources
+
+This means your Databricks vector index must be populated with embeddings that are compatible with the Gemini model you're using.
+
+### Important Compatibility Note
+
+⚠️ **Vector Index Compatibility**: Your Databricks vector index must contain vectors generated using the same embedding model (or a compatible one) as the query embeddings. If you use Gemini embeddings for queries, your index should also be populated with Gemini embeddings.
+
+### Adding Other Embedding Providers
+
+The system uses a clean abstraction pattern. To add another provider (e.g., OpenAI, Cohere):
+
+1. Create a new class in `eval_gvm_vector_search/embeddings/` that extends `BaseEmbedding`
+2. Implement the `embed_query(query: str) -> List[float]` method
+3. Update the factory in `sources/factory.py` to instantiate your provider
+4. Add configuration options to `config.py`
+
+Example:
+
+```python
+# eval_gvm_vector_search/embeddings/openai.py
+from .base import BaseEmbedding
+from typing import List
+import openai
+
+class OpenAIEmbedding(BaseEmbedding):
+    def __init__(self, api_key: str, model: str = "text-embedding-3-small"):
+        self.client = openai.OpenAI(api_key=api_key)
+        self.model = model
+    
+    def embed_query(self, query: str) -> List[float]:
+        response = self.client.embeddings.create(
+            input=query,
+            model=self.model
+        )
+        return response.data[0].embedding
+```

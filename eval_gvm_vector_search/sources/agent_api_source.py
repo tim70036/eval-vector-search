@@ -1,5 +1,7 @@
 """Agent API source implementation for Recommend Products API"""
 
+import mlflow
+from mlflow.entities import SpanType
 import requests
 from typing import Dict, List, Any
 from loguru import logger
@@ -149,6 +151,7 @@ class AgentAPISource(BaseRetrievalSource):
         
         return "\n".join(formatted_results) if formatted_results else "No article results found."
     
+    @mlflow.trace(name="agent_api_retrieve", span_type=SpanType.RETRIEVER)
     def retrieve(self, query: str, config: Dict) -> str:
         """
         Call Recommend Products API and format results.

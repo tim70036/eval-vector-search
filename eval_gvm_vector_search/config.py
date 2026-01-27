@@ -33,6 +33,10 @@ class Settings(BaseSettings):
     # Evaluation Configuration
     num_results: int = Field(..., description="Number of results to retrieve per query")
     
+    # Gemini Embeddings Configuration (optional)
+    gemini_api_key: str = Field(default="", description="Gemini API key for custom embeddings (optional)")
+    gemini_embed_model: str = Field(default="", description="Gemini embedding model name (e.g., 'models/embedding-001', 'gemini-embedding-001')")
+    
     class Config:
         env_file = ".env"
         env_prefix = "EVAL_"
@@ -84,7 +88,41 @@ SOURCE_CONFIGS = [
     #         },
     #     ]
     # },
-    # # Vector search source: improved embeddings index
+
+    # Vector search source: baseline index with Gemini embeddings
+    {
+        "source_type": "vector_search",
+        "label": "baseline",
+        "index_name": "aigc_prod.intent_engine.content_article_gemini_v1_gold_index",
+        "use_gemini_embeddings": True,
+        "gemini_embed_model": "gemini-embedding-001",
+        "gemini_embed_dimension": 768,
+        "search_configs": [
+            {
+                "query_type": "HYBRID"
+            },
+            {
+                "query_type": "HYBRID",
+                "reranker": DatabricksReranker(columns_to_rerank=["title", "content"])
+            },
+            {
+                "query_type": "ANN"
+            },
+            {
+                "query_type": "ANN",
+                "reranker": DatabricksReranker(columns_to_rerank=["title", "content"])
+            },
+            {
+                "query_type": "FULL_TEXT"
+            },
+            {
+                "query_type": "FULL_TEXT",
+                "reranker": DatabricksReranker(columns_to_rerank=["title", "content"])
+            },
+        ]
+    },
+
+    # Vector search source: improved embeddings index
     # {
     #     "source_type": "vector_search",
     #     "label": "embed_search_summary",
@@ -113,14 +151,17 @@ SOURCE_CONFIGS = [
     #         },
     #     ]
     # },    
+
+
+
     # Recommend Products API source (uncomment and configure when ready to use)
-    {
-        "source_type": "agent_api",
-        "label": "recommend_products_api",
-        # Uses env vars: EVAL_RECOMMEND_PRODUCTS_API_ENDPOINT,
-        #                EVAL_RECOMMEND_PRODUCTS_API_TOKEN,
-        #                EVAL_RECOMMEND_PRODUCTS_CUSTOMER_UUID
-        # Everything else (article="", k=10) is hardcoded in AgentAPISource
-        "configs": [{}]  # Single empty config - all params hardcoded
-    },
+    # {
+    #     "source_type": "agent_api",
+    #     "label": "recommend_products_api",
+    #     # Uses env vars: EVAL_RECOMMEND_PRODUCTS_API_ENDPOINT,
+    #     #                EVAL_RECOMMEND_PRODUCTS_API_TOKEN,
+    #     #                EVAL_RECOMMEND_PRODUCTS_CUSTOMER_UUID
+    #     # Everything else (article="", k=10) is hardcoded in AgentAPISource
+    #     "configs": [{}]  # Single empty config - all params hardcoded
+    # },
 ]

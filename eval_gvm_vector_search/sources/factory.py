@@ -51,6 +51,7 @@ class SourceFactory:
                 - label: Source label
                 - index_name: Vector search index name
                 - search_configs: List of search configurations
+                - use_gemini_embeddings: Optional flag to enable Gemini embeddings
             settings: Application settings
             
         Returns:
@@ -63,12 +64,39 @@ class SourceFactory:
         
         logger.info(f"Creating VectorSearchSource: {source_config['label']}")
         
+        # Check if Gemini embeddings should be used
+        embedding_provider = None
+        if source_config.get("use_gemini_embeddings"):
+            if not settings.gemini_api_key or not settings.gemini_embed_model:
+                raise ValueError(
+                    "Gemini embeddings enabled but EVAL_GEMINI_API_KEY or "
+                    "EVAL_GEMINI_EMBED_MODEL not set in environment"
+                )
+            
+            from eval_gvm_vector_search.embeddings import GeminiEmbedding
+            
+            # Get dimension from source config only (not from global settings)
+            dimension = source_config.get("gemini_embed_dimension")
+            dimension = dimension if dimension and dimension > 0 else None  # 0 or None means use default
+            
+            if dimension:
+                logger.info(f"Enabling Gemini embeddings with model: {settings.gemini_embed_model}, dimension: {dimension}")
+            else:
+                logger.info(f"Enabling Gemini embeddings with model: {settings.gemini_embed_model} (default dimension)")
+            
+            embedding_provider = GeminiEmbedding(
+                api_key=settings.gemini_api_key,
+                model=settings.gemini_embed_model,
+                dimension=dimension
+            )
+        
         return VectorSearchSource(
             endpoint_name=settings.vector_search_endpoint,
             index_name=source_config["index_name"],
             label=source_config["label"],
             search_configs=source_config["search_configs"],
-            num_results=settings.num_results
+            num_results=settings.num_results,
+            embedding_provider=embedding_provider
         )
     
     @staticmethod
